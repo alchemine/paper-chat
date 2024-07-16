@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "paper-chat"
+version = "0.1.0"
+description = "Paper Chat"
+authors = ["alchemine <djyoon0223@gmail.com>"]
+readme = "README.md"
+packages = [{include = "paper_chat"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+dask = "^2024.7.0"
+pyyaml = "^6.0.1"
+pandas = "^2.2.2"
+matplotlib = "^3.9.1"
+tabulate = "^0.9.0"
+easydict = "^1.13"
+langchain = "^0.2.8"
+langchain-community = "^0.2.7"
+langchain-openai = "^0.1.16"
+langchainhub = "^0.1.20"
+docarray = "^0.40.0"
+langgraph = "^0.1.8"
+faiss-cpu = "^1.8.0.post1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
