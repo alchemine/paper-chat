@@ -51,10 +51,14 @@ if prompt := st.chat_input():
     st.chat_message("user").write(prompt)
 
     output = st.session_state["agent_executor"].stream(prompt)
-    queries = output["queries"]
     answer = output["answer"]
+
+    queries = output["queries"]
+    joined_queries = ", ".join(queries)
+
     contexts = output["contexts"]
-    msg = f"{answer}\n\nQueries: {queries}\n\nContexts: {contexts}"
+    formatted_contexts = "\n\n".join([f"```{context}```" for context in contexts])
+    msg = f"{answer}\n\n- Queries: {joined_queries} \n\n- Contexts:\n {formatted_contexts}"
 
     st.session_state.messages.append({"role": "assistant", "content": msg})
     st.chat_message("assistant").write(msg)
