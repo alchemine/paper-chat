@@ -27,93 +27,83 @@ Act as if you are an instructor who writes summaries for lecture materials to ex
 
 [Instruction]
 To understand exactly what the author is arguing, you need to understand the key points of the text.
-After understand the key points, write a very detailed and informative summary.
-
-[Constraints]
-1. Use markdown formatting with itemized lists and numbered lists.
-2. Emphasize what the authors most wanted to argue.
-    - Do NOT summarize points with unimportant, unrelated or exceptional cases.
-3. The sentences should be concrete, not abstract or vague.
-4. Answer with Korean.
+After understanding the key points, write a very detailed and informative summary.
 
 [Format]
-1. You should follow the general structure (7 sections) of a scientific paper.
-    - Information, Abstract, Introduction, Related Works, Methodology, Experiments, Conclusion.
+1. You should follow the **nine-sections**:
+    - Information, Abstract, Introduction, Related Works, Methodology, Experiments, Discussion, Conclusion and Keywords.
 
-2. Provide very detailed three-sentences summary in "Abstract" section with numbered lists.
+2. Provide very detailed six-sentences summary in "Abstract" section with numbered lists.
     1. First sentence(Challenges): the challenges that the authors faced.
-    2. Second sentence(Existing works and limitations): previous works to solve the challenges and their limitations.
-    3. Third sentence(Proposed method and contributions): proposed method to solve the challenges and their contributions.
+    2. Second sentence(Existing works): previous works to solve the challenges.
+    3. Third sentence(Limitations): limitations of the existing or previous works.
+    4. Fourth sentence(Motivation): motivation of the authors to propose a new method.
+    5. Fifth sentence(Proposed method): detailed explanation of the proposed method to solve the challenges by the authors.
+    6. Sixth sentence(Contributions): contributions of the proposed method by the authors.
 
 3. Each section have multiple **key sentences** extracted from the paragraphs in the section with numbered lists.
     - Every paragraph in the given text consists of one **key sentence** and several supporting sentences.
     - Extract each **key sentence** from the paragraphs.
     - If the supporting sentences are necessary to understand the **key sentence**, include them.
 
+[Constraints]
+1. Use markdown formatting with itemized lists and numbered lists.
+2. Use markdown underline or colorful font on one or two sentences to emphasize the main points.
+3. The sentences should be concrete, not abstract or vague.
+    - Do NOT summarize points with unimportant, unrelated or exceptional cases.
+4. You must answer with Korean. Because the user is not familiar with english.
+
 [Example]
 ### Information
-1. Title: Neural message passing for quantum chemistry
+1. Title: Neural message passing for quantum chemistry (양자화학을 위한 신경 메시지 전달)
 2. Authors: Justin Gilmer, Samuel S. Schoenholz, Patrick F. Riley, Oriol Vinyals, George E. Dahl
 3. arXiv: https://arxiv.org/pdf/1704.01212.pdf
 
 ### Abstract
 1. Challenges: ...
-2. Existing works and limitations: ...
-3. Proposed method and contributions: ...
+2. Existing works: ...
+3. Limitations: ...
+4. Proposed method: ...
+5. Contributions: ...
 
 ### 1. Introduction
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
 
 ### 2. Related Works
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
 
-### 3. Proposed Methods
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+### 3. Methodology
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
 
 ### 4. Experiments
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
 
 ### 5. Discussion
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
 
 ### 6. Conclusion
-1. <key sentence from a paragraph 1>
-    - <supporting sentence 1 from a paragraph 1>
-2. <key sentence from a paragraph 2>
-    - <supporting sentence 1 from a paragraph 2>
-    - <supporting sentence 2 from a paragraph 2>
-3. <key sentence from a paragraph 3>
+1. <문단 1의 핵심 문장>
+2. <문단 2의 핵심 문장>
+3. <문단 3의 핵심 문장>
 ...
+
+### 7. Keywords
+<논문과 밀접하게 관련이 있는 여러가지 주제들>
 """
 
 
@@ -143,27 +133,30 @@ class RetrievalAgentExecutor:
         )
 
         # TODO: Is it best to include summary in system message?
-        added_system_message = """
-[Role]
-You are QA bot for scientific papers.
+        system_message = """[Role]
+You are an helpful and informative assistant for question-answering tasks. 
 
 [Instruction]
 Answer the following questions based on the summary and retrieved contexts.
+Use the following pieces of retrieved context to answer the question.
+If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 
 [Constraints]
 1. The sentences should be concrete, not abstract or vague.
 2. If you don't know the answer, inform that you don't know and ask for more information.
 3. Answer with Korean.
 
-[Summary]"""
-        added_system_message += "\n------\n"
-        added_system_message += self._summary
-        added_system_message += "\n------\n"
+"""
+        summary = """[Summary]
+---
+{summary}
+---
+"""
         self._agent_executor = create_react_agent(
             self._llm,
             tools=[retriever_tool],
             checkpointer=self._memory,
-            messages_modifier=added_system_message,
+            messages_modifier=system_message + summary,
         )
 
     def stream(self, prompt: str) -> dict:
