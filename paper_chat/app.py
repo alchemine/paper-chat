@@ -5,7 +5,7 @@
 
 import streamlit as st
 
-from paper_chat.agents import RetrievalAgentExecutor
+from paper_chat.agents.retrieval_agent_executor import RetrievalAgentExecutor
 
 
 st.set_page_config(layout="wide")
