@@ -8,27 +8,25 @@ import streamlit as st
 from paper_chat.agents import RetrievalAgentExecutor
 
 
+st.set_page_config(layout="wide")
+st.title("💬 Chatbot")
+st.caption("🚀 A Streamlit chatbot powered by OpenAI")
+
+
 @st.cache_data
 def get_summary(_agent_executor: RetrievalAgentExecutor):
     return _agent_executor.get_summary()
 
 
-st.set_page_config(layout="wide")
-
-
 with st.sidebar:
-    # arxiv_id = st.text_input("arXiv ID", key="arxiv_id", value="1706.03762")
-    arxiv_id = st.text_input("arXiv ID", key="arxiv_id", value="2407.09298")
+    example_id = "2004.07606"
+    arxiv_id = st.text_input("arXiv ID", key="arxiv_id", value=example_id)
     arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}"
-    "e.g. https://arxiv.org/pdf/1706.03762"
+    f"e.g. https://arxiv.org/pdf/{arxiv_id}"
     if "agent_executor" not in st.session_state:
         agent_executor = RetrievalAgentExecutor()
         agent_executor.build(arxiv_url)
         st.session_state["agent_executor"] = agent_executor
-
-
-st.title("💬 Chatbot")
-st.caption("🚀 A Streamlit chatbot powered by OpenAI")
 
 
 if "messages" not in st.session_state:
