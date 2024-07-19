@@ -1,0 +1,28 @@
+[
+  {
+    "name": "John Doe",
+    "url": "https://www.johndoe.com",
+    "summary": "John Doe is a software engineer and a blogger.",
+    "content": "John Doe is a software engineer and a blogger. He is the author of the popular blog johndoe.com where he writes about software engineering, programming, and technology. John has been working in the software industry for over 10 years and has a passion for building great software products. In his free time, John enjoys playing video games, reading books, and spending time with his family.",
+    "created_on": "2021-01-01",
+    "updated_at": "2021-01-01",
+    "category": "blog",
+    "rolePermissions": {
+      "read": true,
+      "write": false
+    }
+  },
+  {
+    "name": "John Doe",
+    "url": "https://www.johndoe.com",
+    "summary": "John Doe is a software engineer and a blogger.",
+    "content": "John Doe is a software engineer and a blogger. He is the author of the popular blog johndoe.com where he writes about software engineering, programming, and technology. John has been working in the software industry for over 10 years and has a passion for building great software products. In his free time, John enjoys playing video games, reading books, and spending time with his family.",
+    "created_on": "2021-01-01",
+    "updated_at": "2021-01-01",
+    "category": "blog",
+    "rolePermissions": {
+      "read": true,
+      "write": false
+    }
+  }
+]

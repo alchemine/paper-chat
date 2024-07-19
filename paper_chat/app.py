@@ -24,8 +24,8 @@ with st.sidebar:
     arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}"
     f"e.g. https://arxiv.org/pdf/{arxiv_id}"
     if "agent_executor" not in st.session_state:
-        agent_executor = RetrievalAgentExecutor()
-        agent_executor.build(arxiv_url)
+        agent_executor = RetrievalAgentExecutor(arxiv_url)
+        agent_executor.build()
         st.session_state["agent_executor"] = agent_executor
 
 
