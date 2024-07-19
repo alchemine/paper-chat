@@ -151,9 +151,9 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 3. Answer with Korean.
 
 """
-        summary = """[Summary]
+        summary = f"""[Summary]
 ---
-{summary}
+{self.get_summary()}
 ---
 """
         self._agent_executor = create_react_agent(
