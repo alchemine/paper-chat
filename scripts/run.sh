@@ -1,3 +1,3 @@
 #!/bin/bash
 
-streamlit run paper_chat/app.py
+poetry run streamlit run paper_chat/app.py

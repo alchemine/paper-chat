@@ -20,10 +20,12 @@ services:
       - elasticsearch.env
     working_dir: /app
     entrypoint: ["/bin/bash", "-c"]
+    ports:
+      - "8501:8501"
     command:
       - |
         .devcontainer/postCreate.sh
-        sleep infinity
+        scripts/run.sh
     restart: always
     privileged: true
     ipc: host
