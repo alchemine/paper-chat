@@ -13,18 +13,18 @@ from paper_chat.core.utils import MetaSingleton
 from paper_chat.core.llm import EMBEDDINGS
 
 
-class ElasticSearchManager(metaclass=MetaSingleton):
+class ElasticSearchManager:
     def __init__(self, reset: bool = False):
         self.es = Elasticsearch(
             hosts="https://es01:9200",
             basic_auth=("elastic", env["ELASTIC_PASSWORD"]),
             verify_certs=False,
         )
-        client_info = self.es.info()
         if reset:
             self.reset_index()
 
         print("Connected to Elasticsearch!")
+        # client_info = self.es.info()
         # pprint(client_info.body)
 
     def reset_index(self):
@@ -66,16 +66,13 @@ class ElasticSearchManager(metaclass=MetaSingleton):
             print(f"Index({index}) does not exist.")
             return
 
-    def search_id(self, index: str, **query_args):
+    def search_id(self, index: str, **query_args) -> str:
         response = self.search(index, **query_args)
         if response:
-            ids = [doc["_id"] for doc in response["hits"]["hits"]]
-        else:
-            ids = [""]
-
-        if len(ids) > 1:
-            raise ValueError(f"Multiple documents found: {ids}")
-        return ids[0]
+            hits = response["hits"]["hits"]
+            if hits and len(hits) == 1:
+                return hits[0]["_id"]
+        return ""
 
     def update(self, index: str, id: str, document: dict):
         try:
@@ -100,6 +97,7 @@ class ElasticSearchManager(metaclass=MetaSingleton):
 
 if __name__ == "__main__":
     es_manager = ElasticSearchManager()
+    es_manager.reset_index()
     # arxiv_url = "https://arxiv.org/pdf/1706.03762"
     # es_manager.insert_paper(arxiv_url)
 

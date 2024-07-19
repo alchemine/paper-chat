@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import requests
 
 
-def get_paper_info_from_url(arxiv_url: str) -> dict:
+def fetch_paper_info_from_url(arxiv_url: str) -> dict:
     # Extract arXiv ID from URL
     arxiv_id_match = re.search(r"arxiv\.org/pdf/(\d+\.\d+)", arxiv_url)
     if not arxiv_id_match:

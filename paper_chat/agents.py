@@ -14,13 +14,11 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langchain_elasticsearch import ElasticsearchStore
 
-from paper_chat.utils.utils import get_paper_info_from_url
+from paper_chat.core.depth_logging import D
+from paper_chat.utils.utils import fetch_paper_info_from_url
 from paper_chat.core.configs import CONFIGS_ES
 from paper_chat.core.llm import CHAT_LLM, EMBEDDINGS
-from paper_chat.core.timer import T
-from paper_chat.utils.elasticsearch_manager import (
-    ElasticSearchManager,
-)
+from paper_chat.utils.elasticsearch_manager import ElasticSearchManager
 
 
 SYSTEM_PROMPT = """[Role]
@@ -109,11 +107,12 @@ After understanding the key points, write a very detailed and informative summar
 
 
 class RetrievalAgentExecutor:
-    def __init__(self, arxiv_url: str, llm=CHAT_LLM) -> None:
-        self.arxiv_url = arxiv_url
-        self.docs = PyPDFLoader(self.arxiv_url).load()
-
+    def __init__(self, arxiv_id: str, llm=CHAT_LLM) -> None:
+        self.arxiv_id = arxiv_id
         self.llm = llm
+
+        self.arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}"
+        self.docs, self.splits = self.chunk(self.arxiv_url)
 
         self.es_manager = ElasticSearchManager()
         self.indices = {
@@ -124,10 +123,13 @@ class RetrievalAgentExecutor:
         # TODO: refactoring
         self.memory = SqliteSaver.from_conn_string(":memory:")
         self.config = {"configurable": {"thread_id": "default"}}
+        self.paper_info = {}
 
+    @D
     def build(self) -> None:
         # 1. Load retriever
-        vectorstore = self.insert_paper()
+        self.paper_info = self.fetch_paper_info(self.arxiv_id)
+        vectorstore = self.insert_paper(self.paper_info)
         self.retriever = vectorstore.as_retriever(kwargs={"k": 5})
         retriever_tool = create_retriever_tool(
             self.retriever,
@@ -163,6 +165,7 @@ If you don't know the answer, just say that you don't know. Use three sentences 
             messages_modifier=system_message + summary,
         )
 
+    @D
     def stream(self, prompt: str) -> dict:
         queries = []
         for step in self._agent_executor.stream(
@@ -199,18 +202,19 @@ If you don't know the answer, just say that you don't know. Use three sentences 
             usage_metadata=usage_metadata,
         )
 
-    @T
-    def get_summary(self, version: str = "stuff") -> str:
-        id = self.es_manager.search_id(
-            self.indices["papers_metadata"],
-            body={"query": {"match": {"arxiv_url": self.arxiv_url}}},
+    @D
+    def chunk(self, arxiv_url: str):
+        docs = PyPDFLoader(arxiv_url).load()
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000, chunk_overlap=200
         )
+        splits = text_splitter.split_documents(docs)
+        return docs, splits
 
-        if id:
-            document = self.es_manager.retrieve_document(
-                index=self.indices["papers_metadata"], id=id
-            )
-            summary = document["_source"]["summary"]
+    @D
+    def get_summary(self, version: str = "stuff") -> str:
+        if doc := self.search_with_arxiv_id(self.arxiv_id):
+            summary = doc["summary"]
         else:
             # If the document does not exist, summarize it.
             prompt = ChatPromptTemplate.from_messages(
@@ -222,19 +226,30 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
             match version:
                 case "stuff":
-                    # 10s
-                    chain = load_summarize_chain(
-                        self.llm, chain_type="stuff", prompt=prompt
-                    )
-                    summary = chain.run(self.docs)
+                    try:
+                        # 30s
+                        chain = load_summarize_chain(
+                            self.llm, chain_type="stuff", prompt=prompt
+                        )
+                        summary = chain.run(self.docs)
+                    except Exception as e:
+                        raise Exception(e)
 
-                # NOTE: too slow
-                #             case "map_reduce":
-                #                 # 104s
-                #                 chain = load_summarize_chain(
-                #                     self.llm, chain_type="map_reduce", combine_prompt=prompt
-                #                 )
-                #                 summary = chain.run(self._splits)
+                        # TODO: fallback but not too slow
+                        # 300s
+                        # fallback: map_reduce
+                        chain = load_summarize_chain(
+                            self.llm, chain_type="map_reduce", combine_prompt=prompt
+                        )
+                        summary = chain.run(self.splits)
+
+                # # NOTE: too slow
+                # case "map_reduce":
+                #     # 104s
+                #     chain = load_summarize_chain(
+                #         self.llm, chain_type="map_reduce", combine_prompt=prompt
+                #     )
+                #     summary = chain.run(self._splits)
 
                 #             case "refine":
                 #                 # 300s
@@ -288,36 +303,52 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
         return summary
 
-    def insert_paper(self):
+    @D
+    def insert_paper(self, paper_info: dict):
+        # TODO: split function into smaller functions
+
         # 1. Check if the paper is in DB
         kwargs = {
             "embedding": EMBEDDINGS,
             "es_connection": self.es_manager.es,
             "index_name": self.indices["papers_contents"],
         }
-        response = self.es_manager.search(
-            index=self.indices["papers_metadata"],
-            body={"query": {"match": {"arxiv_url": self.arxiv_url}}},
-        )
-        if response:
+        if self.search_with_arxiv_id(paper_info["arxiv_id"]):
             vectorstore = ElasticsearchStore(**kwargs)
             return vectorstore
 
         # 2. Add metadata
-        paper_info = self.get_paper_info(self.arxiv_url)
         self.es_manager.insert_document(
             paper_info, index=self.indices["papers_metadata"]
         )
 
         # 3. Add content
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200
-        )
-        splits = text_splitter.split_documents(self.docs)
-        vectorstore = ElasticsearchStore.from_documents(splits, **kwargs)
+        vectorstore = ElasticsearchStore.from_documents(self.splits, **kwargs)
         return vectorstore
 
-    def get_paper_info(self, arxiv_url: str) -> dict:
-        paper_info = get_paper_info_from_url(arxiv_url)
+    @D
+    def fetch_paper_info(self, arxiv_id: str) -> dict:
+        if doc := self.search_with_arxiv_id(arxiv_id):
+            return doc
+
+        paper_info = fetch_paper_info_from_url(self.arxiv_url)
         paper_info["summary"] = self.get_summary()
         return paper_info
+
+    def get_paper_info(self) -> dict:
+        return self.paper_info
+
+    def search_with_arxiv_id(self, arxiv_id: str) -> dict:
+        response = self.es_manager.search(
+            index=self.indices["papers_metadata"],
+            body={"query": {"term": {"arxiv_id": arxiv_id}}},
+        )
+        hits = response["hits"]["hits"]
+        if hits:
+            srcs = [hit["_source"] for hit in hits]
+            assert len(srcs) == 1, srcs
+            result = srcs[0]
+        else:  # empty list
+            result = {}
+
+        return result
