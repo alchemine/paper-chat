@@ -1,11 +1,9 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
 // README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
 {
-  "name": "Existing Dockerfile",
-  "build": {
-    "context": "..",
-    "dockerfile": "../Dockerfile"
-  },
+  "name": "Existing docker-compose",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "entrypoint",
 
   // Configure tool-specific properties.
   "customizations": {
@@ -21,6 +19,8 @@
         "eamodio.gitlens"
       ],
       "settings": {
+        "remote.downloadExtensionsLocally": true,
+        "extensions.verifySignature": false,
         "terminal.integrated.defaultProfile.linux": "bash",
         "githubIssues.issueBranchTitle": "feature/${issueNumber}-${sanitizedIssueTitle}",
         "editor.formatOnSave": true,
@@ -40,15 +40,16 @@
     }
   },
 
-  "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind"],
-  "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
+  // "mounts": ["source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind"],
+  // "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
   "workspaceFolder": "/app",
 
   "containerEnv": {
     "PYTHONPATH": "/app"
-  },
-  "runArgs": ["--env-file", ".env"],
-  "postCreateCommand": "bash .devcontainer/postCreate.sh"
+  }
+
+  // "runArgs": ["--env-file", ".env"],
+  // "onCreateCommand": "bash .devcontainer/postCreate.sh"
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],

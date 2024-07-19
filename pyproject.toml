@@ -23,7 +23,12 @@ langgraph = "^0.1.8"
 faiss-cpu = "^1.8.0.post1"
 streamlit = "^1.36.0"
 pypdf = "^4.3.0"
+elasticsearch = "^8.14.0"
+langchain-elasticsearch = "^0.2.2"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.5"
 
 [build-system]
 requires = ["poetry-core"]
