@@ -46,10 +46,10 @@
 
   "containerEnv": {
     "PYTHONPATH": "/app"
-  }
+  },
 
   // "runArgs": ["--env-file", ".env"],
-  // "onCreateCommand": "bash .devcontainer/postCreate.sh"
+  "onCreateCommand": "bash .devcontainer/postCreate.sh"
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],

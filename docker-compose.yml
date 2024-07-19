@@ -15,27 +15,23 @@ services:
       - ${HOME}/.ssh:/home/vscode/.ssh
     environment:
       PYTHONPATH: /app
-    env_file:
-      - .env
-      - elasticsearch.env
     working_dir: /app
     entrypoint: ["/bin/bash", "-c"]
     ports:
       - "8501:8501"
     command:
       - |
-        .devcontainer/postCreate.sh
-        scripts/run.sh
+        sleep infinity
+        # .devcontainer/postCreate.sh
+        # scripts/run.sh
     restart: always
     privileged: true
     ipc: host
     tty: true
-
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
-    env_file: elasticsearch.env
     user: "0"
     command: >
       bash -c '
@@ -103,7 +99,6 @@ services:
       - esdata01:/usr/share/elasticsearch/data
     ports:
       - ${ES_PORT}:9200
-    env_file: elasticsearch.env
     environment:
       - node.name=es01
       - cluster.name=${CLUSTER_NAME}
@@ -144,7 +139,6 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata02:/usr/share/elasticsearch/data
-    env_file: elasticsearch.env
     environment:
       - node.name=es02
       - cluster.name=${CLUSTER_NAME}
@@ -184,7 +178,6 @@ services:
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata03:/usr/share/elasticsearch/data
-    env_file: elasticsearch.env
     environment:
       - node.name=es03
       - cluster.name=${CLUSTER_NAME}
@@ -231,7 +224,6 @@ services:
       - kibanadata:/usr/share/kibana/data
     ports:
       - ${KIBANA_PORT}:5601
-    env_file: elasticsearch.env
     environment:
       - SERVERNAME=kibana
       - ELASTICSEARCH_HOSTS=https://es01:9200
