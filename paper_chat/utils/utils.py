@@ -50,7 +50,7 @@ def fetch_paper_info_from_url(arxiv_url: str) -> dict:
         semantic_data = response.json()
 
         # Extract citation count
-        paper_info["citation_count"] = semantic_data.get("citationCount", "N/A")
+        paper_info["citation_count"] = semantic_data.get("citationCount")
 
     except requests.RequestException as e:
         print(f"Error fetching data: {e}")

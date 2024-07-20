@@ -225,22 +225,19 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
             match version:
                 case "stuff":
-                    try:
-                        # 30s
-                        chain = load_summarize_chain(
-                            self.llm, chain_type="stuff", prompt=prompt
-                        )
-                        summary = chain.run(self.docs)
-                    except Exception as e:
-                        raise Exception(e)
+                    # 30s
+                    chain = load_summarize_chain(
+                        self.llm, chain_type="stuff", prompt=prompt
+                    )
+                    summary = chain.run(self.docs)
 
-                        # TODO: fallback but not too slow
-                        # 300s
-                        # fallback: map_reduce
-                        chain = load_summarize_chain(
-                            self.llm, chain_type="map_reduce", combine_prompt=prompt
-                        )
-                        summary = chain.run(self.splits)
+                    # TODO: fallback but not too slow
+                    # 300s
+                    # fallback: map_reduce
+                    # chain = load_summarize_chain(
+                    #     self.llm, chain_type="map_reduce", combine_prompt=prompt
+                    # )
+                    # summary = chain.run(self.splits)
 
                 # # NOTE: too slow
                 # case "map_reduce":
@@ -330,8 +327,11 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         if doc := self.search_with_arxiv_id(arxiv_id):
             return doc
 
-        paper_info = fetch_paper_info_from_url(self.arxiv_url)
+        # First, get_summary() to catch error
+        paper_info = {}
         paper_info["summary"] = self.get_summary()
+        _paper_info = fetch_paper_info_from_url(self.arxiv_url)
+        paper_info.update(_paper_info)
 
         # Check null values
         for key, value in paper_info.items():

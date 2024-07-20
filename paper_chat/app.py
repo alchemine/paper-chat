@@ -4,6 +4,7 @@
 """
 
 import re
+import traceback
 import streamlit as st
 from streamlit import session_state as STATE
 
@@ -14,6 +15,9 @@ from paper_chat.core.configs import CONFIGS_LLM
 def initialize_session():
     STATE.messages = []
     STATE.arxiv_id = ""
+
+def add_message(role: str, msg: str, error: bool = False):
+    STATE.messages.append({"role": role, "content": msg, "error": error})
 
 
 st.set_page_config(layout="wide")
@@ -65,25 +69,34 @@ e.g.
         st.stop()
 
     if arxiv_id != STATE.arxiv_id:
-        try:
-            if arxiv_id not in STATE:
+        if arxiv_id not in STATE:
+            try:
                 STATE[arxiv_id] = RetrievalAgentExecutor(arxiv_id, openai_api_key)
                 STATE[arxiv_id].build()
+            except Exception as e:
+                STATE.pop(arxiv_id, None)
+                print(traceback.format_exc())
+                msg = f"모델을 빌드하는 중 오류가 발생했습니다. \n\n```{e}```"
+                add_message("assistant", msg, error=True)
 
-            paper_info = STATE[arxiv_id].get_paper_info()
+        if arxiv_id in STATE:
+            try:
+                paper_info = STATE[arxiv_id].get_paper_info()
+                msg = f"**논문 요약**\n\n- {paper_info['title']} \n- {paper_info['arxiv_url']}"
+                add_message("user", msg)
+                add_message("assistant", paper_info["summary"])
 
-            msg = f"**논문 요약**\n\n- {paper_info['title']} ({paper_info['arxiv_id']})"
-            STATE.messages.append({"role": "user", "content": msg})
-            summary = STATE[arxiv_id].get_summary()
-
-            # Update when successful
-            STATE.arxiv_id = arxiv_id
-        except Exception as e:
-            summary = f"요약을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
-        STATE.messages.append({"role": "assistant", "content": summary})
+                # Update when successful
+                STATE.arxiv_id = arxiv_id
+            except Exception as e:
+                print(traceback.format_exc())
+                msg = f"논문의 정보를 불러오고 요약을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
+                add_message("assistant", msg, error=True)
 
 
 for msg in STATE.messages:
+    # if msg["error"]:
+    #     continue
     st.chat_message(msg["role"]).write(msg["content"])
 
 
@@ -92,7 +105,7 @@ if prompt := st.chat_input():
         st.info("arXiv ID를 입력해주세요.")
         st.stop()
 
-    STATE.messages.append({"role": "user", "content": prompt})
+    add_message("user", prompt)
     st.chat_message("user").write(prompt)
 
     try:
@@ -105,8 +118,10 @@ if prompt := st.chat_input():
         contexts = output["contexts"]
         formatted_contexts = "\n\n".join([f"```{context}```" for context in contexts])
         msg = f"{answer}\n\n- Queries: {joined_queries} \n\n- Contexts:\n {formatted_contexts}"
+        add_message("assistant", msg)
     except Exception as e:
+        print(traceback.format_exc())
         msg = "답변을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
-
-    STATE.messages.append({"role": "assistant", "content": msg})
+        add_message("assistant", msg, error=True)
+    
     st.chat_message("assistant").write(msg)
