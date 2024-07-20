@@ -4,28 +4,34 @@ from pprint import pprint
 from os import environ as env
 
 from elasticsearch import Elasticsearch, NotFoundError, RequestError
-from elasticsearch.helpers import bulk
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-from paper_chat.core.utils import MetaSingleton
-from paper_chat.core.llm import EMBEDDINGS
+from paper_chat.core.configs import CONFIGS_ES
 
 
 class ElasticSearchManager:
-    def __init__(self, reset: bool = False):
+    def __init__(self, mappings: dict = CONFIGS_ES.mappings, reset: bool = False):
         self.es = Elasticsearch(
-            hosts="https://es01:9200",
-            basic_auth=("elastic", env["ELASTIC_PASSWORD"]),
+            hosts=CONFIGS_ES.connection.hosts,
+            basic_auth=(CONFIGS_ES.connection.username, env["ELASTIC_PASSWORD"]),
             verify_certs=False,
         )
+        print("Connected to Elasticsearch!")
+
         if reset:
             self.reset_index()
+        if mappings:
+            self.create_index(mappings)
 
-        print("Connected to Elasticsearch!")
         # client_info = self.es.info()
         # pprint(client_info.body)
+
+    def create_index(self, mappings: dict):
+        for index, mapping in mappings.items():
+            if not self.es.indices.exists(index=index):
+                self.es.indices.create(index=index, body={"mappings": mapping})
+                print(f"Index {index} created successfully.")
+            else:
+                print(f"Index {index} already exists. No changes were made.")
 
     def reset_index(self):
         try:
@@ -74,6 +80,10 @@ class ElasticSearchManager:
                 return hits[0]["_id"]
         return ""
 
+    def search_hit(self, index: str, **query_args):
+        # TODO
+        raise NotImplementedError
+
     def update(self, index: str, id: str, document: dict):
         try:
             response = self.es.update(
@@ -96,13 +106,4 @@ class ElasticSearchManager:
 
 
 if __name__ == "__main__":
-    es_manager = ElasticSearchManager()
-    es_manager.reset_index()
-    # arxiv_url = "https://arxiv.org/pdf/1706.03762"
-    # es_manager.insert_paper(arxiv_url)
-
-    # id = es_manager.search_id(
-    #     INDEX_PAPERS_METADATA, body={"query": {"match": {"title": "Attention"}}}
-    # )
-    # print(id)
-    # es_manager.update(index=INDEX_PAPERS_METADATA, id=id, document={"summary": "abcd"})
+    es_manager = ElasticSearchManager(reset=True)

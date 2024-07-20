@@ -1,18 +1,14 @@
 """Chain builder class"""
 
-from langchain import hub
-from langchain.chains import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain.chains.llm import LLMChain
 from langchain.chains.summarize import load_summarize_chain
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.tools.retriever import create_retriever_tool
-from langchain_core.messages import HumanMessage, BaseMessage
-from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.messages import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_elasticsearch import ElasticsearchStore
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.sqlite import SqliteSaver
-from langchain_elasticsearch import ElasticsearchStore
 
 from paper_chat.core.depth_logging import D
 from paper_chat.utils.utils import fetch_paper_info_from_url
@@ -216,6 +212,9 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         if doc := self.search_with_arxiv_id(self.arxiv_id):
             summary = doc["summary"]
         else:
+            # TODO: logging
+            print(f"Summary of {self.arxiv_id} does not exist. Generating summary..")
+
             # If the document does not exist, summarize it.
             prompt = ChatPromptTemplate.from_messages(
                 [
@@ -333,6 +332,13 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
         paper_info = fetch_paper_info_from_url(self.arxiv_url)
         paper_info["summary"] = self.get_summary()
+
+        # Check null values
+        for key, value in paper_info.items():
+            if isinstance(value, str) and (value.lower() in CONFIGS_ES.null_values):
+                paper_info[key] = None
+                print(f"{key}: {value} -> None")
+
         return paper_info
 
     def get_paper_info(self) -> dict:

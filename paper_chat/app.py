@@ -40,7 +40,10 @@ with st.sidebar:
 """
     )
 
-    if match := re.search(r"(\d{4}\.\d{5})", arxiv_id_input):
+    if arxiv_id_input == "":
+        st.stop()
+    elif match := re.search(r"(\d{4}\.\d{5})", arxiv_id_input):
+        # arxiv_id: https://arxiv.org/pdf/2004.07606 -> 2004.07606
         arxiv_id = match.group(1)
     else:
         st.info(

@@ -3,3 +3,46 @@ papers_metadata:
 
 papers_contents:
   index: papers_contents
+
+mappings:
+  papers_metadata:
+    properties:
+      title:
+        type: keyword
+      abstract:
+        type: text
+      arxiv_id:
+        type: keyword
+      arxiv_url:
+        type: keyword
+      authors:
+        type: text
+      citation_count:
+        type: integer
+      published:
+        type: date
+      summary:
+        type: text
+  papers_contents:
+    properties:
+      metadata:
+        type: object
+        properties:
+          page:
+            type: integer
+          source:
+            type: keyword
+      text:
+        type: text
+      vector:
+        type: dense_vector
+        dims: 1536
+
+connection:
+  hosts: https://es01:9200
+  username: elastic
+
+null_values:
+  - n/a
+  - null
+  - none
