@@ -61,7 +61,7 @@
 2. Docker-compose를 통해 cluster(entrypoint, elasticsearch cluster)를 구축하고 Streamlit 앱을 실행
 
    ```bash
-   docker-compose up
+   docker-compose -f docker-compose.prd.yml up
    ```
 
 3. 브라우저에서 Streamlit app에 접속

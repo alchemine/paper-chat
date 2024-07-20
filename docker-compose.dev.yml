@@ -22,8 +22,6 @@ services:
     command:
       - |
         sleep infinity
-        # .devcontainer/postCreate.sh
-        # scripts/run.sh
     restart: always
     privileged: true
     ipc: host
