@@ -25,6 +25,8 @@ streamlit = "^1.36.0"
 pypdf = "^4.3.0"
 elasticsearch = "^8.14.0"
 langchain-elasticsearch = "^0.2.2"
+beautifulsoup4 = "^4.12.3"
+retry = "^0.9.2"
 
 
 [tool.poetry.group.dev.dependencies]

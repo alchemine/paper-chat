@@ -16,6 +16,7 @@ def initialize_session():
     STATE.messages = []
     STATE.arxiv_id = ""
 
+
 def add_message(role: str, msg: str, error: bool = False):
     STATE.messages.append({"role": role, "content": msg, "error": error})
 
@@ -71,26 +72,28 @@ e.g.
     if arxiv_id != STATE.arxiv_id:
         if arxiv_id not in STATE:
             try:
-                STATE[arxiv_id] = RetrievalAgentExecutor(arxiv_id, openai_api_key)
-                STATE[arxiv_id].build()
-            except Exception as e:
-                STATE.pop(arxiv_id, None)
-                print(traceback.format_exc())
-                msg = f"모델을 빌드하는 중 오류가 발생했습니다. \n\n```{e}```"
-                add_message("assistant", msg, error=True)
+                with st.spinner("논문 정보를 불러오고 요약하는 중.."):
+                    STATE[arxiv_id] = RetrievalAgentExecutor(
+                        arxiv_id, openai_api_key, reset=True
+                    )
+                    STATE[arxiv_id].build()
 
-        if arxiv_id in STATE:
-            try:
                 paper_info = STATE[arxiv_id].get_paper_info()
-                msg = f"**논문 요약**\n\n- {paper_info['title']} \n- {paper_info['arxiv_url']}"
+                msg = "**논문 요약**"
                 add_message("user", msg)
                 add_message("assistant", paper_info["summary"])
+
+                if e := STATE[arxiv_id].get_summary_exception():
+                    print(traceback.format_exc())
+                    msg = f"논문을 요약하는 도중 오류가 발생하였지만, 대화를 계속 진행할 수 있습니다. \n\n```{e}```"
+                    add_message("assistant", msg, error=True)
 
                 # Update when successful
                 STATE.arxiv_id = arxiv_id
             except Exception as e:
+                STATE.pop(arxiv_id, None)
                 print(traceback.format_exc())
-                msg = f"논문의 정보를 불러오고 요약을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
+                msg = f"논문의 정보를 불러오는 도중 오류가 발생했습니다. 다른 논문을 준비해주세요. \n\n```{e}```"
                 add_message("assistant", msg, error=True)
 
 
@@ -123,5 +126,5 @@ if prompt := st.chat_input():
         print(traceback.format_exc())
         msg = "답변을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
         add_message("assistant", msg, error=True)
-    
+
     st.chat_message("assistant").write(msg)
