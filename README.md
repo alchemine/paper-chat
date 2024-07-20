@@ -1,82 +1,101 @@
 # Paper-Chat
 
-질의하고 싶은 논문의 arXiv ID를 이용하여 대화가 가능한 논문 기반 챗봇입니다.
+**Paper-Chat**은 arXiv ID를 이용하여 학술 논문에 대하여 대화할 수 있는 AI 챗봇입니다. \
+연구자, 학생들의 빠른 학습, 효율적인 실전 적용과 트렌드 분석 등을 위해 설계되었으며 복잡한 학술 내용을 쉽게 이해하고 탐색할 수 있도록 도와줄 수 있습니다.
 
-![alt text](assets/image.png)
+![alt text](assets/image-5.png)
 
-# Usage
+# 사전 요구사항
 
-1. Docker-compose를 통해 cluster(entrypoint, elasticsearch)를 구축하고 streamlit을 실행
+1. Docker, Docker Compose가 설치되어 있어야 합니다.
+2. `.env` 파일에 필요한 환경변수가 설정되어 있어야 합니다.
 
-```bash
- docker-compose up
-```
+   ```bash
+   # Needed if using Azure LLM
+   AZURE_OPENAI_ENDPOINT=...
+   AZURE_OPENAI_API_KEY=...
+   OPENAI_API_VERSION=...
+   AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
+   AZURE_OPENAI_LLM_MODEL=...
+   AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
+   AZURE_OPENAI_EMBEDDINGS_MODEL=...
 
-2. Streamlit app 접속
+   # Password for the 'elastic' user (at least 6 characters)
+   ELASTIC_PASSWORD=...
 
-```bash
-http://localhost:8501
-```
+   # Password for the 'kibana_system' user (at least 6 characters)
+   KIBANA_PASSWORD=...
 
-# Description
+   # Version of Elastic products
+   STACK_VERSION=8.14.3
 
-1. 논문의 ID(arXiv ID)를 sidebar에 입력하면, 해당 논문의 요약이 출력됨.
-   - DONE: Elasticsearch에 지금까지 검색한 논문의 정보들을 저장, 캐싱하여 가져옴
-   - DONE: 논문의 ID는 현재 고정되어 있는데, 변경할 수 있도록 해야함.
-2. 이후 해당 논문에 대한 질의 가능.
-   - TODO: Hallucination이 있거나, 제대로 대답을 못하는 경우가 종종 있음
-3. 다른 논문에 대하여 질의를 하고 싶은 경우, sidebar에 새로운 논문의 ID를 입력
-   - DONE: 기능 구현
-4. 이후 해당 논문에 대한 질의 가능.
-   - DONE: 기능 구현
+   # Set the cluster name
+   CLUSTER_NAME=docker-cluster
 
-# TODO
+   # Set to 'basic' or 'trial' to automatically start the 30-day trial
+   LICENSE=basic
+   #LICENSE=trial
 
-1. 주어진 keyword와 관련있는 논문들을 알려주는 기능을 추가
-2. AzureOpenAI 대신 일반 OpenAI token을 받으면 해당 LLM을 사용할 수 있도록 추가
-3. 기타 TODO 해결
-4. ElasticsearchManager Singleton class로 만들기
+   # Port to expose Elasticsearch HTTP API to the host
+   ES_PORT=9200
+   #ES_PORT=127.0.0.1:9200
 
-# .env
+   # Port to expose Kibana to the host
+   KIBANA_PORT=5601
+   #KIBANA_PORT=80
 
-```
-AZURE_OPENAI_ENDPOINT=...
-AZURE_OPENAI_API_KEY=...
-OPENAI_API_VERSION=...
+   # Increase or decrease based on the available host memory (in bytes)
+   MEM_LIMIT=1073741824
 
-AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
-AZURE_OPENAI_LLM_MODEL=...
+   # Project namespace (defaults to the current folder name if not set)
+   #COMPOSE_PROJECT_NAME=paper_chat
+   ```
 
-AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
-AZURE_OPENAI_EMBEDDINGS_MODEL=...
+# 설치 및 실행
 
-# Password for the 'elastic' user (at least 6 characters)
-ELASTIC_PASSWORD=...
+1. Repository를 가져오기
+   ```bash
+   git clone https://github.com/alchemine/paper-chat.git
+   cd paper-chat
+   ```
+2. Docker-compose를 통해 cluster(entrypoint, elasticsearch cluster)를 구축하고 Streamlit 앱을 실행
 
-# Password for the 'kibana_system' user (at least 6 characters)
-KIBANA_PASSWORD=...
+   ```bash
+   docker-compose up
+   ```
 
-# Version of Elastic products
-STACK_VERSION=8.14.3
+3. 브라우저에서 Streamlit app에 접속
+   ```bash
+   http://localhost:8501
+   ```
 
-# Set the cluster name
-CLUSTER_NAME=docker-cluster
+# 사용 방법
 
-# Set to 'basic' or 'trial' to automatically start the 30-day trial
-LICENSE=basic
-#LICENSE=trial
+### 1. Sidebar에 OpenAI API Key와 논문의 arXiv ID를 입력합니다.
 
-# Port to expose Elasticsearch HTTP API to the host
-ES_PORT=9200
-#ES_PORT=127.0.0.1:9200
+![alt text](assets/image-3.png)
 
-# Port to expose Kibana to the host
-KIBANA_PORT=5601
-#KIBANA_PORT=80
+- 논문의 ID는 `2004.07606`과 같은 형식을 하고 있습니다.
+- `https://arxiv.org/pdf/2004.07606` 혹은 `https://arxiv.org/abs/2004.07606` 등 ID를 식별할 수 있는 문자열을 입력받으면 ID가 자동으로 식별됩니다.
 
-# Increase or decrease based on the available host memory (in bytes)
-MEM_LIMIT=1073741824
+### 2. 논문 요약이 자동으로 생성되어 표시됩니다.
 
-# Project namespace (defaults to the current folder name if not set)
-#COMPOSE_PROJECT_NAME=paper_chat
-```
+![alt text](assets/image-1.png)
+
+- 처음으로 논문에 대한 요약문을 생성하는 경우, 약 30초 정도의 시간이 소요됩니다.
+- 이후부턴 기존에 생성된 요약문을 불러옵니다.
+
+### 3. Chatbot 인터페이스를 통해 논문에 대하여 질문하면, 논문 내용을 기반으로 답변을 제공받을 수 있습니다.
+
+![alt text](assets/image-4.png)
+
+- 탐색을 위해 사용된 쿼리(`Queries`)와 참고한 내용(`Contexts`)이 답변과 함께 출력됩니다.
+- 해당 내용을 참고하여 Hallucination이 발생하였는지 확인해보세요.
+
+### 4. 다른 논문에 대하여 질문하고 싶다면, sidebar에 새로운 arXiv ID를 입력하세요.
+
+![alt text](assets/image-5.png)
+
+# 추가 기능 및 기능 개선
+
+주요 개발 진행 상황은 [Issues](https://github.com/alchemine/paper-chat/issues)를 참고해주세요.
