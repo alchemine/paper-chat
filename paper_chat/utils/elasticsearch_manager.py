@@ -9,7 +9,7 @@ from paper_chat.core.configs import CONFIGS_ES
 
 
 class ElasticSearchManager:
-    def __init__(self, mappings: dict = CONFIGS_ES.mappings, reset: bool = False):
+    def __init__(self, reset: bool = False, mappings: dict = CONFIGS_ES.mappings):
         self.es = Elasticsearch(
             hosts=CONFIGS_ES.connection.hosts,
             basic_auth=(CONFIGS_ES.connection.username, env["ELASTIC_PASSWORD"]),

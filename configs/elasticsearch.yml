@@ -7,8 +7,6 @@ papers_contents:
 mappings:
   papers_metadata:
     properties:
-      title:
-        type: keyword
       abstract:
         type: text
       arxiv_id:
@@ -16,13 +14,29 @@ mappings:
       arxiv_url:
         type: keyword
       authors:
-        type: text
-      citation_count:
+        type: object
+        properties:
+          name:
+            type: keyword
+          affiliations:
+            type: text
+      citationCount:
         type: integer
-      published:
+      fieldsOfStudy:
+        type: keyword
+      publicationDate:
         type: date
+      publicationTypes:
+        type: keyword
+      referenceCount:
+        type: integer
       summary:
         type: text
+      title:
+        type: text
+      venue:
+        type: keyword
+
   papers_contents:
     properties:
       metadata:
