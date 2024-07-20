@@ -1,6 +1,6 @@
-chat_llm:
-  provider: azure
+chat_openai:
+  model: gpt-4o-mini
   temperature: 0
 
-embeddings:
-  provider: azure
+openai_embeddings:
+  model: text-embedding-3-small

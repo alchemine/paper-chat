@@ -115,8 +115,22 @@ class SingletonManager:
 
     def __new__(cls):
         if not hasattr(cls, "instance"):
-            cls.instance = super(SingletonManager, cls).__new__(cls)
-        return cls.instance
+            cls.instances = {}
+        return super().__new__(cls)
+
+    def get_instance(self, key):
+        """Get or create an instance for the given key"""
+        if key not in self.instances:
+            self.instances[key] = object()  # 실제 인스턴스 생성 로직으로 대체해야 함
+        return self.instances[key]
+
+    def set_instance(self, key, instance):
+        """Set an instance for the given key"""
+        self.instances[key] = instance
+
+    def has_instance(self, key):
+        """Check if an instance exists for the given key"""
+        return key in self.instances
 
 
 ############################################################
