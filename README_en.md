@@ -63,7 +63,7 @@ It is designed to assist researchers and students in quick learning, efficient p
 2. Build the cluster (entrypoint, elasticsearch cluster) and run the Streamlit app using Docker Compose
 
    ```bash
-   docker-compose up
+   docker-compose -f docker-compose.prd.yml up
    ```
 
 3. Access the Streamlit app in your browser
