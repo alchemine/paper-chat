@@ -7,6 +7,14 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": false
+    },
+    {
+      "name": "streamlit debug",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "${file}"],
+      "justMyCode": true
     }
   ]
 }

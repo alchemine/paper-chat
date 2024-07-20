@@ -13,7 +13,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from paper_chat.core.depth_logging import D
 from paper_chat.utils.utils import fetch_paper_info_from_url
 from paper_chat.core.configs import CONFIGS_ES
-from paper_chat.core.llm import CHAT_LLM, EMBEDDINGS
+from paper_chat.core.llm import get_llm, get_embeddings
 from paper_chat.utils.elasticsearch_manager import ElasticSearchManager
 
 
@@ -103,10 +103,10 @@ After understanding the key points, write a very detailed and informative summar
 
 
 class RetrievalAgentExecutor:
-    def __init__(self, arxiv_id: str, llm=CHAT_LLM) -> None:
+    def __init__(self, arxiv_id: str, openai_api_key: str) -> None:
         self.arxiv_id = arxiv_id
-        self.llm = llm
-
+        self.llm = get_llm(openai_api_key)
+        self.embeddings = get_embeddings(openai_api_key)
         self.arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}"
         self.docs, self.splits = self.chunk(self.arxiv_url)
 
@@ -308,7 +308,7 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
         # 1. Check if the paper is in DB
         kwargs = {
-            "embedding": EMBEDDINGS,
+            "embedding": self.embeddings,
             "es_connection": self.es_manager.es,
             "index_name": self.indices["papers_contents"],
         }
