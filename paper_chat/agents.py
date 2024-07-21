@@ -1,5 +1,7 @@
 """Chain builder class"""
 
+from pprint import pprint
+
 from langchain.chains.summarize import load_summarize_chain
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.messages import HumanMessage
@@ -11,13 +13,13 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from paper_chat.core.depth_logging import D
+from paper_chat.core.configs import CONFIGS_ES, CONFIGS_AGENT
+from paper_chat.core.llm import get_llm, get_embeddings
 from paper_chat.utils.utils import (
     fetch_paper_info_from_url,
     strip_list_string,
     add_newlines,
 )
-from paper_chat.core.configs import CONFIGS_ES, CONFIGS_AGENT
-from paper_chat.core.llm import get_llm, get_embeddings
 from paper_chat.utils.elasticsearch_manager import ElasticSearchManager
 
 
@@ -126,6 +128,9 @@ class RetrievalAgentExecutor:
 
         # 2. Load fundamental paper info from web
         paper_info = fetch_paper_info_from_url(arxiv_id=arxiv_id)
+
+        # 3. Generate fancy information string
+        paper_info["information"] = self.process_paper_info(paper_info)
         return paper_info
 
     @D
@@ -133,7 +138,7 @@ class RetrievalAgentExecutor:
         if "summary" in paper_info:
             return None
 
-        # Generate summary and insert paper_info into DB
+        # Generate summary
         summary_result = self.get_summary()
         paper_info["summary"] = summary_result["summary"]
         return summary_result["exception"]
@@ -259,32 +264,37 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         #     raise ValueError(f"Invalid version: {version}")
 
     @D
-    def insert_documents(self, paper_info: dict):
+    def insert_document(self, paper_info: dict):
+        # Check duplicate
+        if doc := self.search_with_arxiv_id(paper_info["arxiv_id"]):
+            # If the document already exists and has a more rich summary, skip
+            if len(paper_info.get("summary", "")) <= len(doc.get("summary", "")):
+                return
+
         # 1. Check null values for DB insertion
         for key, value in paper_info.items():
             if isinstance(value, str) and (value.lower() in CONFIGS_ES.null_values):
                 paper_info[key] = None
 
-        # 2. Add metadata
-        self.es_manager.insert_document(
-            paper_info, index=self.indices["papers_metadata"]
-        )
-
-        # 3. Add content
-        kwargs = {
-            "embedding": self.embeddings,
-            "es_connection": self.es_manager.es,
-            "index_name": self.indices["papers_contents"],
-        }
-        ElasticsearchStore.from_documents(self.splits, **kwargs)
+        # 2. Add or update metadata
+        if doc:
+            self.es_manager.update_document(
+                paper_info, index=self.indices["papers_metadata"], id=doc["_id"]
+            )
+        else:
+            self.es_manager.insert_document(
+                paper_info, index=self.indices["papers_metadata"]
+            )
 
     def get_retriever(self, index: str):
+        assert index == self.indices["papers_contents"], f"Invalid index: {index}"
+
         kwargs = {
             "embedding": self.embeddings,
             "es_connection": self.es_manager.es,
             "index_name": index,
         }
-        vectorstore = ElasticsearchStore(**kwargs)
+        vectorstore = ElasticsearchStore.from_documents(self.splits, **kwargs)
         retriever = vectorstore.as_retriever(kwargs=CONFIGS_AGENT.retriever)
         return retriever
 
@@ -377,6 +387,7 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         formatted_contexts = "\n\n".join([f"```{context}```" for context in contexts])
         msg = f"{answer}\n\n- Queries: {joined_queries} \n\n- Contexts:\n {formatted_contexts}"
 
+        pprint(usage_metadata)
         return dict(
             queries=queries,
             contexts=contexts,

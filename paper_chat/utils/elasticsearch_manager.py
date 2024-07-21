@@ -84,7 +84,7 @@ class ElasticSearchManager:
         # TODO
         raise NotImplementedError
 
-    def update(self, index: str, id: str, document: dict):
+    def update_document(self, document: dict, index: str, id: str):
         try:
             response = self.es.update(
                 index=index, id=id, body={"doc": document, "doc_as_upsert": True}

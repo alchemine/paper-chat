@@ -32,6 +32,8 @@ mappings:
         type: integer
       summary:
         type: text
+      information:
+        type: text
       title:
         type: text
       venue:
