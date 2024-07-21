@@ -20,3 +20,6 @@ CONFIGS_LLM = load_yaml(_CONFIGS_LLM_PATH)
 
 _CONFIGS_ES_PATH = join(CONFIGS_PATH, "elasticsearch.yml")
 CONFIGS_ES = load_yaml(_CONFIGS_ES_PATH)
+
+_CONFIGS_AGENT_PATH = join(CONFIGS_PATH, "agent.yml")
+CONFIGS_AGENT = load_yaml(_CONFIGS_AGENT_PATH)

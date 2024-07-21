@@ -21,6 +21,16 @@ def add_message(role: str, msg: str, error: bool = False):
     STATE.messages.append({"role": role, "content": msg, "error": error})
 
 
+def add_and_write_message(role: str, msg: str, error: bool = False):
+    STATE.messages.append({"role": role, "content": msg, "error": error})
+    st.chat_message(role).write(msg)
+
+
+def write_messages():
+    for msg in STATE.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
+
+
 st.set_page_config(layout="wide")
 st.title("💬 Paper-Chat")
 st.caption("🚀 A Streamlit chatbot powered by OpenAI")
@@ -69,62 +79,55 @@ e.g.
         )
         st.stop()
 
-    if arxiv_id != STATE.arxiv_id:
-        if arxiv_id not in STATE:
-            try:
-                with st.spinner("논문 정보를 불러오고 요약하는 중.."):
-                    STATE[arxiv_id] = RetrievalAgentExecutor(
-                        arxiv_id, openai_api_key, reset=True
-                    )
-                    STATE[arxiv_id].build()
 
-                paper_info = STATE[arxiv_id].get_paper_info()
-                msg = "**논문 요약**"
-                add_message("user", msg)
-                add_message("assistant", paper_info["summary"])
+if arxiv_id != STATE.arxiv_id:
+    if arxiv_id not in STATE:
+        try:
+            with st.spinner("LLM을 불러오고 데이터베이스에 접속하는 중.."):
+                STATE[arxiv_id] = RetrievalAgentExecutor(arxiv_id, openai_api_key)
 
-                if e := STATE[arxiv_id].get_summary_exception():
-                    print(traceback.format_exc())
-                    msg = f"논문을 요약하는 도중 오류가 발생하였지만, 대화를 계속 진행할 수 있습니다. \n\n```{e}```"
-                    add_message("assistant", msg, error=True)
+            with st.spinner("논문 정보를 불러오는 중.."):
+                paper_info = STATE[arxiv_id].load_paper_info(arxiv_id)
 
-                # Update when successful
-                STATE.arxiv_id = arxiv_id
-            except Exception as e:
-                STATE.pop(arxiv_id, None)
+            msg = "**논문 정보**"
+            information = STATE[arxiv_id].process_paper_info(paper_info)
+
+            add_and_write_message("user", msg)
+            add_and_write_message("assistant", information)
+
+            with st.spinner("논문을 요약하는 중.."):
+                summary_exception = STATE[arxiv_id].append_summary(paper_info)
+                STATE[arxiv_id].insert_documents(paper_info)
+
+            if summary_exception:
                 print(traceback.format_exc())
-                msg = f"논문의 정보를 불러오는 도중 오류가 발생했습니다. 다른 논문을 준비해주세요. \n\n```{e}```"
-                add_message("assistant", msg, error=True)
+                msg = f"논문을 요약하는 도중 오류가 발생하였지만, 대화를 계속 진행할 수 있습니다. \n\n```{summary_exception}```"
+                add_and_write_message("assistant", msg, error=True)
+            else:
+                msg = "**논문 요약**"
+                add_and_write_message("user", msg)
+                add_and_write_message("assistant", paper_info["summary"])
 
+            with st.spinner("AI 모델을 생성하는 중.."):
+                STATE[arxiv_id].build(information)
 
-for msg in STATE.messages:
-    # if msg["error"]:
-    #     continue
-    st.chat_message(msg["role"]).write(msg["content"])
+            # Update when successful
+            STATE.arxiv_id = arxiv_id
+        except Exception as e:
+            STATE.pop(arxiv_id, None)
+            print(traceback.format_exc())
+            msg = f"논문의 정보를 불러오는 도중 오류가 발생했습니다. 다른 논문을 준비해주세요. \n\n```{e}```"
+            add_and_write_message("assistant", msg, error=True)
 
 
 if prompt := st.chat_input():
-    if not arxiv_id:
-        st.info("arXiv ID를 입력해주세요.")
-        st.stop()
-
-    add_message("user", prompt)
-    st.chat_message("user").write(prompt)
+    write_messages()
+    add_and_write_message("user", prompt)
 
     try:
         output = STATE[arxiv_id].stream(prompt)
-        answer = output["answer"]
-
-        queries = output["queries"]
-        joined_queries = ", ".join(queries)
-
-        contexts = output["contexts"]
-        formatted_contexts = "\n\n".join([f"```{context}```" for context in contexts])
-        msg = f"{answer}\n\n- Queries: {joined_queries} \n\n- Contexts:\n {formatted_contexts}"
-        add_message("assistant", msg)
+        add_and_write_message("assistant", output["msg"])
     except Exception as e:
         print(traceback.format_exc())
         msg = "답변을 생성하는 중 오류가 발생했습니다. \n\n```{e}```"
-        add_message("assistant", msg, error=True)
-
-    st.chat_message("assistant").write(msg)
+        add_and_write_message("assistant", msg, error=True)

@@ -16,7 +16,7 @@ from paper_chat.utils.utils import (
     strip_list_string,
     add_newlines,
 )
-from paper_chat.core.configs import CONFIGS_ES
+from paper_chat.core.configs import CONFIGS_ES, CONFIGS_AGENT
 from paper_chat.core.llm import get_llm, get_embeddings
 from paper_chat.utils.elasticsearch_manager import ElasticSearchManager
 
@@ -119,24 +119,41 @@ class RetrievalAgentExecutor:
         self.paper_info = {}
 
     @D
-    def build(self) -> None:
-        # 1. Load retriever
-        self.paper_info = self.generate_paper_info(self.arxiv_id)
-        vectorstore = self.insert_paper(self.paper_info)
-        self.retriever = vectorstore.as_retriever(kwargs={"k": 5})
+    def load_paper_info(self, arxiv_id: str) -> dict:
+        # 1. Load cache if exists
+        if doc := self.search_with_arxiv_id(arxiv_id):
+            return doc
+
+        # 2. Load fundamental paper info from web
+        paper_info = fetch_paper_info_from_url(arxiv_id=arxiv_id)
+        return paper_info
+
+    @D
+    def append_summary(self, paper_info: dict) -> Exception | None:
+        if "summary" in paper_info:
+            return None
+
+        # Generate summary and insert paper_info into DB
+        summary_result = self.get_summary()
+        paper_info["summary"] = summary_result["summary"]
+        return summary_result["exception"]
+
+    @D
+    def build(self, information: str) -> None:
+        retriever = self.get_retriever(self.indices["papers_contents"])
         retriever_tool = create_retriever_tool(
-            self.retriever,
+            retriever,
             "scientific_paper_retriever",
             "Searches and returns information from scientific papers",
         )
 
-        # 2. Genearate agent executor
-        # TODO: Is it best to include summary in system message?
+        # 3. Genearate agent executor
+        # TODO: Is it best to include information in system message?
         system_message = """[Role]
 You are an helpful and informative assistant for question-answering tasks. 
 
 [Instruction]
-Answer the following questions based on the summary and retrieved contexts.
+Answer the following questions based on the information and retrieved contexts.
 Use the following pieces of retrieved context to answer the question.
 If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.
 
@@ -146,16 +163,16 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 3. Answer with Korean.
 
 """
-        summary = f"""[Summary]
+        information = f"""[Information]
 ---
-{self.paper_info["summary"]}
+{information}
 ---
 """
         self._agent_executor = create_react_agent(
             self.llm,
             tools=[retriever_tool],
             checkpointer=self.memory,
-            messages_modifier=system_message + summary,
+            messages_modifier=system_message + information,
         )
 
     @D
@@ -242,18 +259,11 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         #     raise ValueError(f"Invalid version: {version}")
 
     @D
-    def insert_paper(self, paper_info: dict):
-        # TODO: split function into smaller functions
-
-        # 1. Check if the paper is in DB
-        kwargs = {
-            "embedding": self.embeddings,
-            "es_connection": self.es_manager.es,
-            "index_name": self.indices["papers_contents"],
-        }
-        if self.search_with_arxiv_id(paper_info["arxiv_id"]):
-            vectorstore = ElasticsearchStore(**kwargs)
-            return vectorstore
+    def insert_documents(self, paper_info: dict):
+        # 1. Check null values for DB insertion
+        for key, value in paper_info.items():
+            if isinstance(value, str) and (value.lower() in CONFIGS_ES.null_values):
+                paper_info[key] = None
 
         # 2. Add metadata
         self.es_manager.insert_document(
@@ -261,38 +271,22 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         )
 
         # 3. Add content
-        vectorstore = ElasticsearchStore.from_documents(self.splits, **kwargs)
-        return vectorstore
+        kwargs = {
+            "embedding": self.embeddings,
+            "es_connection": self.es_manager.es,
+            "index_name": self.indices["papers_contents"],
+        }
+        ElasticsearchStore.from_documents(self.splits, **kwargs)
 
-    @D
-    def generate_paper_info(self, arxiv_id: str) -> dict:
-        # 1. Load cache if exists
-        if doc := self.search_with_arxiv_id(arxiv_id):
-            return doc
-
-        # 2. Load fundamental paper info from web
-        paper_info = fetch_paper_info_from_url(self.arxiv_url)
-
-        # 3. Generate base summary
-        summary_result = self.get_summary()
-        self.summary_exception = summary_result["exception"]
-
-        # 4. Add base summary
-        information = self.process_paper_info(paper_info)
-        paper_info["summary"] = information + summary_result["summary"]
-
-        # 5. Check null values (for DB insertion)
-        for key, value in paper_info.items():
-            if isinstance(value, str) and (value.lower() in CONFIGS_ES.null_values):
-                paper_info[key] = None
-
-        return paper_info
-
-    def get_paper_info(self) -> dict:
-        return self.paper_info
-
-    def get_summary_exception(self) -> None | Exception:
-        return self.summary_exception
+    def get_retriever(self, index: str):
+        kwargs = {
+            "embedding": self.embeddings,
+            "es_connection": self.es_manager.es,
+            "index_name": index,
+        }
+        vectorstore = ElasticsearchStore(**kwargs)
+        retriever = vectorstore.as_retriever(kwargs=CONFIGS_AGENT.retriever)
+        return retriever
 
     def search_with_arxiv_id(self, arxiv_id: str) -> dict:
         response = self.es_manager.search(
@@ -302,7 +296,7 @@ If you don't know the answer, just say that you don't know. Use three sentences 
         hits = response["hits"]["hits"]
         if hits:
             srcs = [hit["_source"] for hit in hits]
-            assert len(srcs) == 1, srcs
+            assert len(srcs) == 1, f"Multiple hits for {arxiv_id}: {srcs}"
             result = srcs[0]
         else:  # empty list
             result = {}
@@ -322,8 +316,10 @@ If you don't know the answer, just say that you don't know. Use three sentences 
             author_with_newline = f"\n\t- {author}"
             authors_with_newline.append(author_with_newline)
 
-        # TODO: improve keywords
         fields_of_study = strip_list_string(paper_info["fieldsOfStudy"])
+
+        # TODO: add keywords
+        # keywords = self.generate_keywords(paper_info)
 
         # TODO: add citation(chicago style)
         # citation = self.generate_citation(paper_info)
@@ -333,7 +329,7 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 ### Information
 - **Title**: {paper_info["title"]}
 - **Citation count**: {paper_info["citationCount"] or "unknown"}
-- **Publication**: {paper_info["venue"]} ({paper_info["publicationDate"]}), {strip_list_string(paper_info["publicationTypes"])}
+- **Publication**: *{paper_info["venue"]} ({paper_info["publicationDate"]}), {strip_list_string(paper_info["publicationTypes"])}*
 - **Authors**: {"".join(authors_with_newline)}
 - **Reference count**: {paper_info["referenceCount"] or "unknown"}
 - **Fields of Study**: {fields_of_study}
@@ -344,9 +340,6 @@ If you don't know the answer, just say that you don't know. Use three sentences 
     ```
 """
         return information
-
-    # def generate_citation(self, paper_info: dict) -> str:
-    #     raise NotImplementedError
 
     @D
     def stream(self, prompt: str) -> dict:
@@ -378,11 +371,18 @@ If you don't know the answer, just say that you don't know. Use three sentences 
 
         if not queries:
             contexts = []
+
+        # Postprocess
+        joined_queries = ", ".join(queries)
+        formatted_contexts = "\n\n".join([f"```{context}```" for context in contexts])
+        msg = f"{answer}\n\n- Queries: {joined_queries} \n\n- Contexts:\n {formatted_contexts}"
+
         return dict(
             queries=queries,
             contexts=contexts,
             answer=answer,
             usage_metadata=usage_metadata,
+            msg=msg,
         )
 
     @D
