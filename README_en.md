@@ -52,6 +52,8 @@ It is designed to assist researchers and students in quick learning, efficient p
 3. If you want to use `AzureChatOpenAI`, required environment variables must be set in the `dev.env` file.
 
    ```bash
+   OPENAI_API_KEY=...
+
    # Needed if using Azure LLM
    AZURE_OPENAI_ENDPOINT=...
    AZURE_OPENAI_API_KEY=...
@@ -62,6 +64,7 @@ It is designed to assist researchers and students in quick learning, efficient p
    AZURE_OPENAI_EMBEDDINGS_MODEL=...
    ```
 
+   - If you write `OPENAI_API_KEY`, OpenAI API Key value is automatically filled with the value.
    - You can use `AzureChatOpenAI` with `azure` input in OpenAI API Key.
 
 # How to Use

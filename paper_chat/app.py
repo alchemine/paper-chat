@@ -4,9 +4,9 @@
 """
 
 import re
+from os import environ as env
 import traceback
 import streamlit as st
-from operator import xor
 from streamlit import session_state as STATE
 
 from paper_chat.agents import RetrievalAgentExecutor
@@ -15,7 +15,7 @@ from paper_chat.core.configs import CONFIGS_LLM
 
 def initialize_session():
     STATE.messages = []
-    STATE.state_condition = ()
+    STATE.session_id = ()
     STATE.use_summary = False
     STATE.no_summary = False
 
@@ -64,7 +64,10 @@ if "initialize_session" not in STATE:
 
 with st.sidebar:
     openai_api_key = st.text_input(
-        "**OpenAI API Key**", key="openai_api_key", placeholder="sk-proj-*****"
+        "**OpenAI API Key**",
+        key="openai_api_key",
+        placeholder="sk-proj-*****",
+        value=env.get("OPENAI_API_KEY", ""),
     )
     st.write(
         f"""
@@ -99,9 +102,9 @@ e.g.
 - https://arxiv.org/pdf/2305.02301
 """
     )
-    state_condition = (openai_api_key, (use_summary, no_summary), arxiv_id_input)
+    session_id = (openai_api_key, (use_summary, no_summary), arxiv_id_input)
 
-    # Check conditions
+    # Check session
     if openai_api_key == "":
         st.stop()
 
@@ -123,15 +126,14 @@ e.g.
         st.stop()
 
 
-if state_condition != STATE.state_condition:
+if session_id != STATE.session_id:
     write_messages()
 
+    # Load session
     if arxiv_id not in STATE:
         try:
             with st.spinner("LLM을 불러오고 데이터베이스에 접속하는 중.."):
-                STATE[arxiv_id] = RetrievalAgentExecutor(
-                    arxiv_id, openai_api_key, reset=True
-                )
+                STATE[arxiv_id] = RetrievalAgentExecutor(arxiv_id, openai_api_key)
         except Exception as e:
             print(traceback.format_exc())
             msg = f"LLM을 불러오고 데이터베이스에 접속하는 도중 오류가 발생했습니다. 프로그램이 정상적으로 동작하고 있는지 확인해주세요. \n\n```{e}```"
@@ -141,25 +143,24 @@ if state_condition != STATE.state_condition:
     try:
         with st.spinner("논문 정보를 불러오는 중.."):
             paper_info = STATE[arxiv_id].load_paper_info(arxiv_id)
-        add_and_write_information(arxiv_id)
+            add_and_write_information(arxiv_id)
 
         if use_summary:
             with st.spinner("논문을 요약하는 중.."):
                 summary_exception = STATE[arxiv_id].append_summary(paper_info)
                 STATE[arxiv_id].insert_document(paper_info)
-            add_and_write_summary(paper_info, summary_exception)
+                add_and_write_summary(paper_info, summary_exception)
 
         with st.spinner("챗봇 모델을 생성하는 중.."):
             STATE[arxiv_id].build(paper_info["information"])
+            msg = "**대화를 시작할 수 있습니다! 어떤 것이 궁금하신가요?**"
+            add_and_write_message("assistant", msg)
 
-        msg = "**대화를 시작할 수 있습니다! 어떤 것이 궁금하신가요?**"
-        add_and_write_message("assistant", msg)
-
-        # Update when successful
-        STATE.state_condition = state_condition
+            # Update when successful
+            STATE.session_id = session_id
     except Exception as e:
         # STATE.pop(arxiv_id, None)
-        STATE.pop(state_condition)
+        STATE.pop(session_id)
         print(traceback.format_exc())
         msg = f"논문의 정보를 불러오는 도중 오류가 발생했습니다. 다른 논문을 준비해주세요. \n\n```{e}```"
         st.chat_message("assistant").write(msg)

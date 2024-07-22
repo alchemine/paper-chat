@@ -47,6 +47,8 @@
 3. `AzureChatOpenAI`를 사용할 경우, `dev.env` 파일에 필요한 환경변수가 설정되어 있어야 합니다.
 
    ```bash
+   OPENAI_API_KEY=...
+
    # Needed if using Azure LLM
    AZURE_OPENAI_ENDPOINT=...
    AZURE_OPENAI_API_KEY=...
@@ -57,6 +59,7 @@
    AZURE_OPENAI_EMBEDDINGS_MODEL=...
    ```
 
+   - `OPENAI_API_KEY`를 적으면 OpenAI API Key 항목이 자동으로 해당 값으로 채워집니다.
    - OpenAI API Key에 `azure` 라고 치면 `AzureChatOpenAI`를 사용할 수 있습니다.
 
 # 사용 방법
