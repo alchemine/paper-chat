@@ -8,50 +8,10 @@
 # 사전 요구사항
 
 1. Docker, Docker Compose가 설치되어 있어야 합니다.
-2. `.env` 파일에 필요한 환경변수가 설정되어 있어야 합니다.
-
-   ```bash
-   # Needed if using Azure LLM
-   AZURE_OPENAI_ENDPOINT=...
-   AZURE_OPENAI_API_KEY=...
-   OPENAI_API_VERSION=...
-   AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
-   AZURE_OPENAI_LLM_MODEL=...
-   AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
-   AZURE_OPENAI_EMBEDDINGS_MODEL=...
-
-   # Password for the 'elastic' user (at least 6 characters)
-   ELASTIC_PASSWORD=...
-
-   # Password for the 'kibana_system' user (at least 6 characters)
-   KIBANA_PASSWORD=...
-
-   # Version of Elastic products
-   STACK_VERSION=8.14.3
-
-   # Set the cluster name
-   CLUSTER_NAME=docker-cluster
-
-   # Set to 'basic' or 'trial' to automatically start the 30-day trial
-   LICENSE=basic
-   #LICENSE=trial
-
-   # Port to expose Elasticsearch HTTP API to the host
-   ES_PORT=9200
-   #ES_PORT=127.0.0.1:9200
-
-   # Port to expose Kibana to the host
-   KIBANA_PORT=5601
-   #KIBANA_PORT=80
-
-   # Increase or decrease based on the available host memory (in bytes)
-   MEM_LIMIT=1073741824
-
-   # Project namespace (defaults to the current folder name if not set)
-   #COMPOSE_PROJECT_NAME=paper_chat
-   ```
 
 # 설치 및 실행
+
+## Production
 
 1. Repository를 가져오기
    ```bash
@@ -68,6 +28,36 @@
    ```bash
    http://localhost:8501
    ```
+
+## Development
+
+1. Repository를 가져오기
+   ```bash
+   git clone https://github.com/alchemine/paper-chat.git
+   cd paper-chat
+   ```
+2. Docker-compose를 통해 cluster(entrypoint, elasticsearch cluster)를 구축
+
+   ```bash
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+   - 혹은, dev container를 사용
+
+3. `AzureChatOpenAI`를 사용할 경우, `dev.env` 파일에 필요한 환경변수가 설정되어 있어야 합니다.
+
+   ```bash
+   # Needed if using Azure LLM
+   AZURE_OPENAI_ENDPOINT=...
+   AZURE_OPENAI_API_KEY=...
+   OPENAI_API_VERSION=...
+   AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
+   AZURE_OPENAI_LLM_MODEL=...
+   AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
+   AZURE_OPENAI_EMBEDDINGS_MODEL=...
+   ```
+
+   - OpenAI API Key에 `azure` 라고 치면 `AzureChatOpenAI`를 사용할 수 있습니다.
 
 # 사용 방법
 

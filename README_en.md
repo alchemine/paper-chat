@@ -8,50 +8,10 @@ It is designed to assist researchers and students in quick learning, efficient p
 # Prerequisites
 
 1. Docker and Docker Compose must be installed.
-2. Required environment variables must be set in the `.env` file.
-
-   ```bash
-   # Needed if using Azure LLM
-   AZURE_OPENAI_ENDPOINT=...
-   AZURE_OPENAI_API_KEY=...
-   OPENAI_API_VERSION=...
-   AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
-   AZURE_OPENAI_LLM_MODEL=...
-   AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
-   AZURE_OPENAI_EMBEDDINGS_MODEL=...
-
-   # Password for the 'elastic' user (at least 6 characters)
-   ELASTIC_PASSWORD=...
-
-   # Password for the 'kibana_system' user (at least 6 characters)
-   KIBANA_PASSWORD=...
-
-   # Version of Elastic products
-   STACK_VERSION=8.14.3
-
-   # Set the cluster name
-   CLUSTER_NAME=docker-cluster
-
-   # Set to 'basic' or 'trial' to automatically start the 30-day trial
-   LICENSE=basic
-   #LICENSE=trial
-
-   # Port to expose Elasticsearch HTTP API to the host
-   ES_PORT=9200
-   #ES_PORT=127.0.0.1:9200
-
-   # Port to expose Kibana to the host
-   KIBANA_PORT=5601
-   #KIBANA_PORT=80
-
-   # Increase or decrease based on the available host memory (in bytes)
-   MEM_LIMIT=1073741824
-
-   # Project namespace (defaults to the current folder name if not set)
-   #COMPOSE_PROJECT_NAME=paper_chat
-   ```
 
 # Installation and Execution
+
+## Production
 
 1. Clone the repository
 
@@ -67,9 +27,42 @@ It is designed to assist researchers and students in quick learning, efficient p
    ```
 
 3. Access the Streamlit app in your browser
+
    ```bash
    http://localhost:8501
    ```
+
+## Development
+
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/alchemine/paper-chat.git
+   cd paper-chat
+   ```
+
+2. Build the cluster (entrypoint, elasticsearch cluster)
+
+   ```bash
+   docker-compose -f docker-compose.dev.yml up
+   ```
+
+   - Otherwise, use dev container
+
+3. If you want to use `AzureChatOpenAI`, required environment variables must be set in the `dev.env` file.
+
+   ```bash
+   # Needed if using Azure LLM
+   AZURE_OPENAI_ENDPOINT=...
+   AZURE_OPENAI_API_KEY=...
+   OPENAI_API_VERSION=...
+   AZURE_OPENAI_LLM_DEPLOYMENT_NAME=...
+   AZURE_OPENAI_LLM_MODEL=...
+   AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT=...
+   AZURE_OPENAI_EMBEDDINGS_MODEL=...
+   ```
+
+   - You can use `AzureChatOpenAI` with `azure` input in OpenAI API Key.
 
 # How to Use
 
