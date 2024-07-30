@@ -1,10 +1,16 @@
 """Utility"""
 
+import os
 import re
-from pprint import pprint
+from urllib import request
+from collections import OrderedDict
 
 import requests
 from retry import retry
+
+from langchain_community.document_loaders.generic import GenericLoader
+from langchain_community.document_loaders.parsers import GrobidParser
+from langchain_core.document_loaders.base import Document
 
 
 @retry(delay=10, tries=3)
@@ -72,6 +78,36 @@ def fetch_paper_info_from_url(arxiv_url: str = None, arxiv_id: str = None) -> di
     data = fetch_semantic_scholar_data(arxiv_id, fields)
     paper_info.update(data)
     return paper_info
+
+
+def parse_arxiv_paper(arxiv_url: str) -> list[Document]:
+    """Parse an arXiv paper from a URL."""
+    tmp_file_name = f"/tmp/arxiv_{arxiv_url.split('/')[-1].replace('.', '_')}.pdf"
+    request.urlretrieve(arxiv_url, tmp_file_name)
+    loader = GenericLoader.from_filesystem(
+        "/tmp/",
+        glob="arxiv_*",
+        suffixes=[".pdf"],
+        parser=GrobidParser(
+            segment_sentences=False,
+            grobid_server="http://grobid:8070/api/processFulltextDocument",
+        ),
+    )
+    docs = loader.load()
+    os.remove(tmp_file_name)
+
+    # Parse
+    sections = OrderedDict()
+    for doc in docs:
+        section_title = doc.metadata["section_title"]
+        if section_title not in sections:
+            sections[section_title] = Document(
+                page_content="", metadata={"section_title": section_title}
+            )
+        section = sections[section_title]
+        section.page_content = f"{section.page_content} {doc.page_content}"
+
+    return list(sections.values())
 
 
 def strip_list_string(lst: list) -> str:

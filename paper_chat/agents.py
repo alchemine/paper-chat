@@ -19,6 +19,7 @@ from paper_chat.utils.utils import (
     fetch_paper_info_from_url,
     strip_list_string,
     add_newlines,
+    parse_arxiv_paper,
 )
 from paper_chat.utils.elasticsearch_manager import ElasticSearchManager
 
@@ -31,74 +32,65 @@ To understand exactly what the author is arguing, you need to understand the key
 After understanding the key points, write a very detailed and informative summary.
 
 [Format]
-1. You should follow the general **seven-sections**:
-    - Abstract, Introduction, Related Works, Methodology, Experiments, Discussion, Conclusion.
-2. Provide very detailed six-sentences summary in "Abstract" section with numbered lists.
-    - Each sentence should start with **bold name** and colon.
-3. Each section has five or more **key sentences** extracted from the paragraphs in the section with numbered lists.
-    - Every paragraph in the given text consists of one **key sentence** and several supporting sentences.
-    - Extract each **key sentence** from the paragraphs.
-    - If the supporting sentences are necessary to understand the **key sentence**, include them.
+1. Use markdown formatting with itemized lists and numbered lists.
+2. The main sections is the given section titles.
+3. The sub sections of each section is summaries(key sentences) of the paragraphs in the section.
 
 [Constraints]
-1. Use markdown formatting with itemized lists and numbered lists.
-2. Use markdown underline or colorful font on one or two sentences to emphasize the main points.
-3. The sentences should be concrete, not abstract or vague.
-    - Do NOT summarize points with unimportant, unrelated or exceptional cases.
-4. You must answer with Korean. Because the user is not familiar with english.
+1. You must answer with Korean. Because the user is not familiar with english.
     - But each section title should be in English and start with ### (three hashtags).
-
-[Example]
-### Abstract
-1. **Challenges**: <the challenges that the authors faced>
-2. **Existing works**: <previous works to solve the challenges>
-3. **Limitations**: <limitations of the existing or previous works>
-4. **Motivation**: <motivation of the authors to propose a new method>
-5. **Proposed method**: <detailed explanation of the proposed method to solve the challenges by the authors>
-6. **Contributions**: <contributions of the proposed method by the authors>
-
-### Introduction
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
-
-### Related Works
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
-
-### Methodology
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
-
-### Experiments
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
-
-### Discussion
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
-
-### Conclusion
-1. <문단 1의 핵심 문장>
-2. <문단 2의 핵심 문장>
-3. <문단 3의 핵심 문장>
-4. <문단 4의 핵심 문장>
-5. <문단 5의 핵심 문장>
 """
+
+# [Example]
+# ### Abstract
+# 1. **Challenges**: <the challenges that the authors faced>
+# 2. **Existing works**: <previous works to solve the challenges>
+# 3. **Limitations**: <limitations of the existing or previous works>
+# 4. **Motivation**: <motivation of the authors to propose a new method>
+# 5. **Proposed method**: <detailed explanation of the proposed method to solve the challenges by the authors>
+# 6. **Contributions**: <contributions of the proposed method by the authors>
+
+# ### Introduction
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
+
+# ### Related Works
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
+
+# ### Methodology
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
+
+# ### Experiments
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
+
+# ### Discussion
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
+
+# ### Conclusion
+# 1. <문단 1의 핵심 문장>
+# 2. <문단 2의 핵심 문장>
+# 3. <문단 3의 핵심 문장>
+# 4. <문단 4의 핵심 문장>
+# 5. <문단 5의 핵심 문장>
 
 
 class RetrievalAgentExecutor:
@@ -108,6 +100,7 @@ class RetrievalAgentExecutor:
         self.embeddings = get_embeddings(openai_api_key)
         self.arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}"
         self.docs, self.splits = self.chunk(self.arxiv_url)
+        self.paper_sections = parse_arxiv_paper(self.arxiv_url)
 
         self.es_manager = ElasticSearchManager(reset)
         self.indices = {
@@ -191,7 +184,8 @@ If you don't know the answer, just say that you don't know. Use three sentences 
                 ]
             )
             chain = load_summarize_chain(self.llm, chain_type="stuff", prompt=prompt)
-            summary = chain.run(self.docs)
+            summary = chain.run(self.paper_sections)
+            # summary = chain.run(self.docs)
             return {"summary": summary, "exception": None}
         except Exception as e:
             # If the summarization fails, return an empty summary.
